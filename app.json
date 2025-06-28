@@ -34,6 +34,9 @@
       "eas": {
         "projectId": "0f0b13d5-7682-4c42-ac58-af1b61d84033"
       }
+    },
+    "android": {
+      "package": "com.himanshujoshi.vendieats"
     }
   }
 }
