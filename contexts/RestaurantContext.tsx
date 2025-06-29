@@ -1,226 +1,254 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-
-export interface MenuItem {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  image: string;
-  category: string;
-  isAvailable: boolean;
-  preparationTime: number;
-}
-
-export interface Restaurant {
-  id: string;
-  name: string;
-  description: string;
-  image: string;
-  coverImage: string;
-  category: string;
-  address: string;
-  phone: string;
-  email: string;
-  rating: number;
-  deliveryTime: string;
-  deliveryFee: number;
-  isOpen: boolean;
-  openingHours: {
-    [key: string]: { open: string; close: string; closed: boolean };
-  };
-  menu: MenuItem[];
-  ownerId: string;
-}
-
-export interface Order {
-  id: string;
-  restaurantId: string;
-  customerName: string;
-  customerPhone: string;
-  customerAddress: string;
-  items: Array<{
-    id: string;
-    name: string;
-    quantity: number;
-    price: number;
-    customizations?: string[];
-  }>;
-  subtotal: number;
-  deliveryFee: number;
-  tax: number;
-  total: number;
-  status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'out_for_delivery' | 'delivered' | 'cancelled';
-  paymentMethod: string;
-  orderTime: string;
-  estimatedDeliveryTime: string;
-}
+import { restaurantService, Restaurant, MenuItem } from '@/lib/restaurants';
+import { orderService, Order } from '@/lib/orders';
 
 interface RestaurantContextType {
   restaurants: Restaurant[];
-  orders: Order[];
   currentRestaurant: Restaurant | null;
-  addRestaurant: (restaurant: Omit<Restaurant, 'id' | 'rating' | 'menu'>) => void;
-  updateRestaurant: (id: string, updates: Partial<Restaurant>) => void;
-  addMenuItem: (restaurantId: string, item: Omit<MenuItem, 'id'>) => void;
-  updateMenuItem: (restaurantId: string, itemId: string, updates: Partial<MenuItem>) => void;
-  deleteMenuItem: (restaurantId: string, itemId: string) => void;
-  updateOrderStatus: (orderId: string, status: Order['status']) => void;
+  orders: Order[];
+  isLoading: boolean;
+  error: string | null;
+  
+  // Restaurant management
+  fetchRestaurants: (filters?: any) => Promise<void>;
+  fetchRestaurant: (id: string) => Promise<Restaurant | null>;
+  createRestaurant: (data: any) => Promise<Restaurant | null>;
+  updateRestaurant: (id: string, data: any) => Promise<Restaurant | null>;
+  deleteRestaurant: (id: string) => Promise<void>;
+  
+  // Menu management
+  addMenuItem: (restaurantId: string, item: any) => Promise<MenuItem | null>;
+  updateMenuItem: (restaurantId: string, itemId: string, data: any) => Promise<MenuItem | null>;
+  deleteMenuItem: (restaurantId: string, itemId: string) => Promise<void>;
+  
+  // Order management
+  fetchOrders: (filters?: any) => Promise<void>;
+  updateOrderStatus: (orderId: string, status: Order['status']) => Promise<void>;
   getRestaurantOrders: (restaurantId: string) => Order[];
   getRestaurantEarnings: (restaurantId: string, period: 'today' | 'week' | 'month') => number;
+  
+  // Utility
   setCurrentRestaurant: (restaurant: Restaurant | null) => void;
+  clearError: () => void;
 }
 
 const RestaurantContext = createContext<RestaurantContextType | undefined>(undefined);
 
 export function RestaurantProvider({ children }: { children: React.ReactNode }) {
-  const [restaurants, setRestaurants] = useState<Restaurant[]>([
-    {
-      id: '1',
-      name: 'Bella Italia',
-      description: 'Authentic Italian cuisine with fresh ingredients and traditional recipes.',
-      image: 'https://images.pexels.com/photos/958545/pexels-photo-958545.jpeg',
-      coverImage: 'https://images.pexels.com/photos/1581384/pexels-photo-1581384.jpeg',
-      category: 'Italian',
-      address: '123 Main St, Downtown',
-      phone: '+1 (555) 123-4567',
-      email: 'info@bellaitalia.com',
-      rating: 4.8,
-      deliveryTime: '25-30 min',
-      deliveryFee: 2.99,
-      isOpen: true,
-      openingHours: {
-        monday: { open: '11:00', close: '22:00', closed: false },
-        tuesday: { open: '11:00', close: '22:00', closed: false },
-        wednesday: { open: '11:00', close: '22:00', closed: false },
-        thursday: { open: '11:00', close: '22:00', closed: false },
-        friday: { open: '11:00', close: '23:00', closed: false },
-        saturday: { open: '11:00', close: '23:00', closed: false },
-        sunday: { open: '12:00', close: '21:00', closed: false },
-      },
-      menu: [
-        {
-          id: '1',
-          name: 'Margherita Pizza',
-          description: 'Fresh mozzarella, tomato sauce, basil',
-          price: 16.99,
-          image: 'https://images.pexels.com/photos/315755/pexels-photo-315755.jpeg',
-          category: 'Pizza',
-          isAvailable: true,
-          preparationTime: 15,
-        },
-        {
-          id: '2',
-          name: 'Spaghetti Carbonara',
-          description: 'Eggs, pecorino cheese, pancetta, black pepper',
-          price: 18.99,
-          image: 'https://images.pexels.com/photos/4518843/pexels-photo-4518843.jpeg',
-          category: 'Pasta',
-          isAvailable: true,
-          preparationTime: 12,
-        },
-      ],
-      ownerId: 'owner1',
-    },
-  ]);
-
-  const [orders, setOrders] = useState<Order[]>([
-    {
-      id: '1',
-      restaurantId: '1',
-      customerName: 'John Doe',
-      customerPhone: '+1 (555) 987-6543',
-      customerAddress: '456 Oak Ave, Midtown',
-      items: [
-        { id: '1', name: 'Margherita Pizza', quantity: 2, price: 16.99 },
-        { id: '2', name: 'Spaghetti Carbonara', quantity: 1, price: 18.99 },
-      ],
-      subtotal: 52.97,
-      deliveryFee: 2.99,
-      tax: 4.24,
-      total: 60.20,
-      status: 'pending',
-      paymentMethod: 'card',
-      orderTime: new Date().toISOString(),
-      estimatedDeliveryTime: new Date(Date.now() + 30 * 60000).toISOString(),
-    },
-  ]);
-
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [currentRestaurant, setCurrentRestaurant] = useState<Restaurant | null>(null);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const addRestaurant = (restaurantData: Omit<Restaurant, 'id' | 'rating' | 'menu'>) => {
-    const newRestaurant: Restaurant = {
-      ...restaurantData,
-      id: Date.now().toString(),
-      rating: 0,
-      menu: [],
-    };
-    setRestaurants(prev => [...prev, newRestaurant]);
+  const clearError = () => setError(null);
+
+  const handleError = (error: any, defaultMessage: string) => {
+    const message = error instanceof Error ? error.message : defaultMessage;
+    setError(message);
+    console.error(message, error);
   };
 
-  const updateRestaurant = (id: string, updates: Partial<Restaurant>) => {
-    setRestaurants(prev =>
-      prev.map(restaurant =>
-        restaurant.id === id ? { ...restaurant, ...updates } : restaurant
-      )
-    );
+  const fetchRestaurants = async (filters?: any) => {
+    try {
+      setIsLoading(true);
+      clearError();
+      const data = await restaurantService.getRestaurants(filters);
+      setRestaurants(data);
+    } catch (error) {
+      handleError(error, 'Failed to fetch restaurants');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const addMenuItem = (restaurantId: string, itemData: Omit<MenuItem, 'id'>) => {
-    const newItem: MenuItem = {
-      ...itemData,
-      id: Date.now().toString(),
-    };
-    
-    setRestaurants(prev =>
-      prev.map(restaurant =>
-        restaurant.id === restaurantId
-          ? { ...restaurant, menu: [...restaurant.menu, newItem] }
-          : restaurant
-      )
-    );
+  const fetchRestaurant = async (id: string): Promise<Restaurant | null> => {
+    try {
+      clearError();
+      const restaurant = await restaurantService.getRestaurant(id);
+      if (restaurant) {
+        // Update the restaurant in the list if it exists
+        setRestaurants(prev => 
+          prev.map(r => r._id === id ? restaurant : r)
+        );
+      }
+      return restaurant;
+    } catch (error) {
+      handleError(error, 'Failed to fetch restaurant');
+      return null;
+    }
   };
 
-  const updateMenuItem = (restaurantId: string, itemId: string, updates: Partial<MenuItem>) => {
-    setRestaurants(prev =>
-      prev.map(restaurant =>
-        restaurant.id === restaurantId
-          ? {
-              ...restaurant,
-              menu: restaurant.menu.map(item =>
-                item.id === itemId ? { ...item, ...updates } : item
-              ),
-            }
-          : restaurant
-      )
-    );
+  const createRestaurant = async (data: any): Promise<Restaurant | null> => {
+    try {
+      setIsLoading(true);
+      clearError();
+      const restaurant = await restaurantService.createRestaurant(data);
+      if (restaurant) {
+        setRestaurants(prev => [...prev, restaurant]);
+      }
+      return restaurant;
+    } catch (error) {
+      handleError(error, 'Failed to create restaurant');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const deleteMenuItem = (restaurantId: string, itemId: string) => {
-    setRestaurants(prev =>
-      prev.map(restaurant =>
-        restaurant.id === restaurantId
-          ? {
-              ...restaurant,
-              menu: restaurant.menu.filter(item => item.id !== itemId),
-            }
-          : restaurant
-      )
-    );
+  const updateRestaurant = async (id: string, data: any): Promise<Restaurant | null> => {
+    try {
+      clearError();
+      const restaurant = await restaurantService.updateRestaurant(id, data);
+      if (restaurant) {
+        setRestaurants(prev => 
+          prev.map(r => r._id === id ? restaurant : r)
+        );
+        if (currentRestaurant?._id === id) {
+          setCurrentRestaurant(restaurant);
+        }
+      }
+      return restaurant;
+    } catch (error) {
+      handleError(error, 'Failed to update restaurant');
+      return null;
+    }
   };
 
-  const updateOrderStatus = (orderId: string, status: Order['status']) => {
-    setOrders(prev =>
-      prev.map(order =>
-        order.id === orderId ? { ...order, status } : order
-      )
-    );
+  const deleteRestaurant = async (id: string): Promise<void> => {
+    try {
+      clearError();
+      await restaurantService.deleteRestaurant(id);
+      setRestaurants(prev => prev.filter(r => r._id !== id));
+      if (currentRestaurant?._id === id) {
+        setCurrentRestaurant(null);
+      }
+    } catch (error) {
+      handleError(error, 'Failed to delete restaurant');
+    }
   };
 
-  const getRestaurantOrders = (restaurantId: string) => {
+  const addMenuItem = async (restaurantId: string, item: any): Promise<MenuItem | null> => {
+    try {
+      clearError();
+      const menuItem = await restaurantService.addMenuItem(restaurantId, item);
+      if (menuItem) {
+        // Update the restaurant's menu in the local state
+        setRestaurants(prev => 
+          prev.map(r => 
+            r._id === restaurantId 
+              ? { ...r, menu: [...r.menu, menuItem] }
+              : r
+          )
+        );
+        if (currentRestaurant?._id === restaurantId) {
+          setCurrentRestaurant(prev => 
+            prev ? { ...prev, menu: [...prev.menu, menuItem] } : prev
+          );
+        }
+      }
+      return menuItem;
+    } catch (error) {
+      handleError(error, 'Failed to add menu item');
+      return null;
+    }
+  };
+
+  const updateMenuItem = async (restaurantId: string, itemId: string, data: any): Promise<MenuItem | null> => {
+    try {
+      clearError();
+      const menuItem = await restaurantService.updateMenuItem(restaurantId, itemId, data);
+      if (menuItem) {
+        // Update the restaurant's menu in the local state
+        setRestaurants(prev => 
+          prev.map(r => 
+            r._id === restaurantId 
+              ? { 
+                  ...r, 
+                  menu: r.menu.map(item => 
+                    item._id === itemId ? menuItem : item
+                  )
+                }
+              : r
+          )
+        );
+        if (currentRestaurant?._id === restaurantId) {
+          setCurrentRestaurant(prev => 
+            prev ? {
+              ...prev,
+              menu: prev.menu.map(item => 
+                item._id === itemId ? menuItem : item
+              )
+            } : prev
+          );
+        }
+      }
+      return menuItem;
+    } catch (error) {
+      handleError(error, 'Failed to update menu item');
+      return null;
+    }
+  };
+
+  const deleteMenuItem = async (restaurantId: string, itemId: string): Promise<void> => {
+    try {
+      clearError();
+      await restaurantService.deleteMenuItem(restaurantId, itemId);
+      // Update the restaurant's menu in the local state
+      setRestaurants(prev => 
+        prev.map(r => 
+          r._id === restaurantId 
+            ? { ...r, menu: r.menu.filter(item => item._id !== itemId) }
+            : r
+        )
+      );
+      if (currentRestaurant?._id === restaurantId) {
+        setCurrentRestaurant(prev => 
+          prev ? {
+            ...prev,
+            menu: prev.menu.filter(item => item._id !== itemId)
+          } : prev
+        );
+      }
+    } catch (error) {
+      handleError(error, 'Failed to delete menu item');
+    }
+  };
+
+  const fetchOrders = async (filters?: any) => {
+    try {
+      setIsLoading(true);
+      clearError();
+      const data = await orderService.getOrders(filters);
+      setOrders(data);
+    } catch (error) {
+      handleError(error, 'Failed to fetch orders');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updateOrderStatus = async (orderId: string, status: Order['status']) => {
+    try {
+      clearError();
+      const updatedOrder = await orderService.updateOrderStatus(orderId, status);
+      if (updatedOrder) {
+        setOrders(prev => 
+          prev.map(order => 
+            order._id === orderId ? updatedOrder : order
+          )
+        );
+      }
+    } catch (error) {
+      handleError(error, 'Failed to update order status');
+    }
+  };
+
+  const getRestaurantOrders = (restaurantId: string): Order[] => {
     return orders.filter(order => order.restaurantId === restaurantId);
   };
 
-  const getRestaurantEarnings = (restaurantId: string, period: 'today' | 'week' | 'month') => {
+  const getRestaurantEarnings = (restaurantId: string, period: 'today' | 'week' | 'month'): number => {
     const restaurantOrders = orders.filter(
       order => order.restaurantId === restaurantId && order.status === 'delivered'
     );
@@ -241,24 +269,36 @@ export function RestaurantProvider({ children }: { children: React.ReactNode }) 
     }
 
     return restaurantOrders
-      .filter(order => new Date(order.orderTime) >= startDate)
+      .filter(order => new Date(order.createdAt) >= startDate)
       .reduce((total, order) => total + order.subtotal, 0);
   };
+
+  // Load initial data
+  useEffect(() => {
+    fetchRestaurants();
+  }, []);
 
   return (
     <RestaurantContext.Provider value={{
       restaurants,
-      orders,
       currentRestaurant,
-      addRestaurant,
+      orders,
+      isLoading,
+      error,
+      fetchRestaurants,
+      fetchRestaurant,
+      createRestaurant,
       updateRestaurant,
+      deleteRestaurant,
       addMenuItem,
       updateMenuItem,
       deleteMenuItem,
+      fetchOrders,
       updateOrderStatus,
       getRestaurantOrders,
       getRestaurantEarnings,
       setCurrentRestaurant,
+      clearError,
     }}>
       {children}
     </RestaurantContext.Provider>
