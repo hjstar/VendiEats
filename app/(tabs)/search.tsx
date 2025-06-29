@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,9 +8,10 @@ import {
   Image,
   TextInput,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Search, Filter, Star, Clock, X } from 'lucide-react-native';
+import { useRestaurant } from '@/contexts/RestaurantContext';
+import { Search, Filter, Star, Clock, X, ArrowLeft } from 'lucide-react-native';
 
 const searchSuggestions = [
   'Pizza',
@@ -21,69 +22,55 @@ const searchSuggestions = [
   'Chinese',
   'Thai',
   'Indian',
-];
-
-const restaurants = [
-  {
-    id: '1',
-    name: 'Bella Italia',
-    image: 'https://images.pexels.com/photos/958545/pexels-photo-958545.jpeg',
-    rating: 4.8,
-    deliveryTime: '25-30 min',
-    category: 'Italian',
-    deliveryFee: 2.99,
-    distance: '1.2 km',
-    tags: ['pizza', 'pasta', 'italian'],
-  },
-  {
-    id: '2',
-    name: 'Burger House',
-    image: 'https://images.pexels.com/photos/70497/pexels-photo-70497.jpeg',
-    rating: 4.6,
-    deliveryTime: '20-25 min',
-    category: 'Burgers',
-    deliveryFee: 1.99,
-    distance: '0.8 km',
-    tags: ['burgers', 'fries', 'american'],
-  },
-  {
-    id: '3',
-    name: 'Sushi Master',
-    image: 'https://images.pexels.com/photos/357573/pexels-photo-357573.jpeg',
-    rating: 4.9,
-    deliveryTime: '30-35 min',
-    category: 'Japanese',
-    deliveryFee: 3.99,
-    distance: '2.1 km',
-    tags: ['sushi', 'ramen', 'japanese'],
-  },
-  {
-    id: '4',
-    name: 'Taco Fiesta',
-    image: 'https://images.pexels.com/photos/461198/pexels-photo-461198.jpeg',
-    rating: 4.5,
-    deliveryTime: '15-20 min',
-    category: 'Mexican',
-    deliveryFee: 1.49,
-    distance: '0.5 km',
-    tags: ['tacos', 'burritos', 'mexican'],
-  },
+  'Pasta',
+  'Salad',
 ];
 
 export default function SearchScreen() {
-  const [searchQuery, setSearchQuery] = useState('');
+  const { q } = useLocalSearchParams<{ q?: string }>();
+  const [searchQuery, setSearchQuery] = useState(q || '');
   const [recentSearches, setRecentSearches] = useState(['Pizza', 'Sushi']);
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedFilters, setSelectedFilters] = useState({
+    category: '',
+    minRating: 0,
+    maxDeliveryFee: 0,
+    openOnly: false,
+  });
+  const { restaurants } = useRestaurant();
+
+  useEffect(() => {
+    if (q) {
+      setSearchQuery(q);
+    }
+  }, [q]);
 
   const filteredRestaurants = restaurants.filter(restaurant => {
-    if (!searchQuery) return false;
+    if (!searchQuery && !selectedFilters.category && !selectedFilters.openOnly) return false;
     
     const query = searchQuery.toLowerCase();
-    return (
+    const matchesSearch = !searchQuery || (
       restaurant.name.toLowerCase().includes(query) ||
       restaurant.category.toLowerCase().includes(query) ||
-      restaurant.tags.some(tag => tag.includes(query))
+      restaurant.menu.some(item => 
+        item.name.toLowerCase().includes(query) ||
+        item.description.toLowerCase().includes(query)
+      )
     );
+
+    const matchesCategory = !selectedFilters.category || 
+      restaurant.category === selectedFilters.category;
+    
+    const matchesRating = !selectedFilters.minRating || 
+      restaurant.rating >= selectedFilters.minRating;
+    
+    const matchesDeliveryFee = !selectedFilters.maxDeliveryFee || 
+      restaurant.deliveryFee <= selectedFilters.maxDeliveryFee;
+    
+    const matchesOpenStatus = !selectedFilters.openOnly || restaurant.isOpen;
+
+    return matchesSearch && matchesCategory && matchesRating && 
+           matchesDeliveryFee && matchesOpenStatus;
   });
 
   const handleSearch = (query: string) => {
@@ -101,9 +88,23 @@ export default function SearchScreen() {
     setRecentSearches(prev => prev.filter(term => term !== searchTerm));
   };
 
+  const clearFilters = () => {
+    setSelectedFilters({
+      category: '',
+      minRating: 0,
+      maxDeliveryFee: 0,
+      openOnly: false,
+    });
+  };
+
+  const categories = [...new Set(restaurants.map(r => r.category))];
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <ArrowLeft size={24} color="#333" />
+        </TouchableOpacity>
         <View style={styles.searchContainer}>
           <Search size={20} color="#666" style={styles.searchIcon} />
           <TextInput
@@ -112,7 +113,9 @@ export default function SearchScreen() {
             value={searchQuery}
             onChangeText={setSearchQuery}
             placeholderTextColor="#999"
-            autoFocus
+            autoFocus={!q}
+            returnKeyType="search"
+            onSubmitEditing={() => handleSearch(searchQuery)}
           />
           {searchQuery ? (
             <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
@@ -121,15 +124,67 @@ export default function SearchScreen() {
           ) : null}
         </View>
         <TouchableOpacity
-          style={styles.filterButton}
+          style={[styles.filterButton, showFilters && styles.activeFilterButton]}
           onPress={() => setShowFilters(!showFilters)}
         >
-          <Filter size={20} color="#FF6B35" />
+          <Filter size={20} color={showFilters ? "#fff" : "#FF6B35"} />
         </TouchableOpacity>
       </View>
 
+      {/* Filters Panel */}
+      {showFilters && (
+        <View style={styles.filtersPanel}>
+          <View style={styles.filterHeader}>
+            <Text style={styles.filterTitle}>Filters</Text>
+            <TouchableOpacity onPress={clearFilters}>
+              <Text style={styles.clearFiltersText}>Clear All</Text>
+            </TouchableOpacity>
+          </View>
+          
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryFilters}>
+            {categories.map(category => (
+              <TouchableOpacity
+                key={category}
+                style={[
+                  styles.categoryFilter,
+                  selectedFilters.category === category && styles.activeCategoryFilter
+                ]}
+                onPress={() => setSelectedFilters(prev => ({
+                  ...prev,
+                  category: prev.category === category ? '' : category
+                }))}
+              >
+                <Text style={[
+                  styles.categoryFilterText,
+                  selectedFilters.category === category && styles.activeCategoryFilterText
+                ]}>
+                  {category}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          <View style={styles.filterOptions}>
+            <TouchableOpacity
+              style={[styles.filterOption, selectedFilters.openOnly && styles.activeFilterOption]}
+              onPress={() => setSelectedFilters(prev => ({
+                ...prev,
+                openOnly: !prev.openOnly
+              }))}
+            >
+              <Text style={[
+                styles.filterOptionText,
+                selectedFilters.openOnly && styles.activeFilterOptionText
+              ]}>
+                Open Now
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
       <ScrollView showsVerticalScrollIndicator={false}>
-        {!searchQuery ? (
+        {!searchQuery && !Object.values(selectedFilters).some(Boolean) ? (
           <>
             {/* Recent Searches */}
             {recentSearches.length > 0 && (
@@ -174,36 +229,61 @@ export default function SearchScreen() {
           /* Search Results */
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>
-              {filteredRestaurants.length} results for "{searchQuery}"
+              {filteredRestaurants.length} result{filteredRestaurants.length !== 1 ? 's' : ''}
+              {searchQuery && ` for "${searchQuery}"`}
             </Text>
             {filteredRestaurants.map(restaurant => (
               <TouchableOpacity
                 key={restaurant.id}
-                style={styles.restaurantCard}
+                style={[styles.restaurantCard, !restaurant.isOpen && styles.closedRestaurant]}
                 onPress={() => router.push(`/restaurant/${restaurant.id}`)}
+                activeOpacity={0.8}
               >
                 <Image source={{ uri: restaurant.image }} style={styles.restaurantImage} />
                 <View style={styles.restaurantInfo}>
-                  <Text style={styles.restaurantName}>{restaurant.name}</Text>
+                  <View style={styles.restaurantHeader}>
+                    <Text style={styles.restaurantName} numberOfLines={1}>{restaurant.name}</Text>
+                    {!restaurant.isOpen && (
+                      <View style={styles.closedBadge}>
+                        <Text style={styles.closedText}>Closed</Text>
+                      </View>
+                    )}
+                  </View>
                   <Text style={styles.restaurantCategory}>{restaurant.category}</Text>
                   <View style={styles.restaurantMeta}>
                     <View style={styles.ratingContainer}>
                       <Star size={12} color="#FFD700" fill="#FFD700" />
                       <Text style={styles.ratingText}>{restaurant.rating}</Text>
+                      <Text style={styles.reviewCount}>({restaurant.reviewCount})</Text>
                     </View>
                     <Text style={styles.metaText}>•</Text>
                     <Text style={styles.metaText}>{restaurant.deliveryTime}</Text>
                     <Text style={styles.metaText}>•</Text>
-                    <Text style={styles.metaText}>{restaurant.distance}</Text>
+                    <Text style={styles.deliveryFeeText}>${restaurant.deliveryFee} delivery</Text>
                   </View>
-                  <Text style={styles.deliveryFee}>${restaurant.deliveryFee} delivery</Text>
+                  {!restaurant.isOpen && (
+                    <Text style={styles.closedStatus}>Currently Closed</Text>
+                  )}
                 </View>
               </TouchableOpacity>
             ))}
             {filteredRestaurants.length === 0 && (
               <View style={styles.noResults}>
                 <Text style={styles.noResultsText}>No restaurants found</Text>
-                <Text style={styles.noResultsSubtext}>Try searching for something else</Text>
+                <Text style={styles.noResultsSubtext}>
+                  Try adjusting your search terms or filters
+                </Text>
+                {(searchQuery || Object.values(selectedFilters).some(Boolean)) && (
+                  <TouchableOpacity 
+                    style={styles.clearAllButton}
+                    onPress={() => {
+                      setSearchQuery('');
+                      clearFilters();
+                    }}
+                  >
+                    <Text style={styles.clearAllButtonText}>Clear Search & Filters</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             )}
           </View>
@@ -223,6 +303,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  backButton: {
+    marginRight: 12,
   },
   searchContainer: {
     flex: 1,
@@ -252,6 +337,82 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#FF6B35',
+  },
+  activeFilterButton: {
+    backgroundColor: '#FF6B35',
+  },
+  filtersPanel: {
+    backgroundColor: '#f8f9fa',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    paddingVertical: 16,
+  },
+  filterHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 12,
+  },
+  filterTitle: {
+    fontSize: 16,
+    fontFamily: 'Poppins-SemiBold',
+    color: '#333',
+  },
+  clearFiltersText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Medium',
+    color: '#FF6B35',
+  },
+  categoryFilters: {
+    paddingLeft: 20,
+    marginBottom: 12,
+  },
+  categoryFilter: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  activeCategoryFilter: {
+    backgroundColor: '#FF6B35',
+    borderColor: '#FF6B35',
+  },
+  categoryFilterText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+    color: '#666',
+  },
+  activeCategoryFilterText: {
+    color: '#fff',
+  },
+  filterOptions: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+  },
+  filterOption: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  activeFilterOption: {
+    backgroundColor: '#FF6B35',
+    borderColor: '#FF6B35',
+  },
+  filterOptionText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+    color: '#666',
+  },
+  activeFilterOptionText: {
+    color: '#fff',
   },
   section: {
     marginBottom: 24,
@@ -291,6 +452,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
     marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
   suggestionText: {
     fontSize: 14,
@@ -309,6 +472,9 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+  closedRestaurant: {
+    opacity: 0.7,
+  },
   restaurantImage: {
     width: 80,
     height: 80,
@@ -320,11 +486,28 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     justifyContent: 'center',
   },
+  restaurantHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
   restaurantName: {
     fontSize: 16,
     fontFamily: 'Poppins-SemiBold',
     color: '#333',
-    marginBottom: 2,
+    flex: 1,
+  },
+  closedBadge: {
+    backgroundColor: '#ff4444',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  closedText: {
+    fontSize: 10,
+    fontFamily: 'Inter-SemiBold',
+    color: '#fff',
   },
   restaurantCategory: {
     fontSize: 12,
@@ -348,16 +531,28 @@ const styles = StyleSheet.create({
     color: '#333',
     marginLeft: 4,
   },
+  reviewCount: {
+    fontSize: 12,
+    fontFamily: 'Inter-Regular',
+    color: '#999',
+    marginLeft: 2,
+  },
   metaText: {
     fontSize: 12,
     fontFamily: 'Inter-Regular',
     color: '#666',
     marginHorizontal: 4,
   },
-  deliveryFee: {
+  deliveryFeeText: {
     fontSize: 12,
     fontFamily: 'Inter-Medium',
     color: '#4CAF50',
+  },
+  closedStatus: {
+    fontSize: 12,
+    fontFamily: 'Inter-SemiBold',
+    color: '#ff4444',
+    marginTop: 4,
   },
   noResults: {
     alignItems: 'center',
@@ -373,5 +568,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Inter-Regular',
     color: '#666',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  clearAllButton: {
+    backgroundColor: '#FF6B35',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  clearAllButtonText: {
+    fontSize: 14,
+    fontFamily: 'Inter-SemiBold',
+    color: '#fff',
   },
 });
