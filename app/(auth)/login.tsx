@@ -12,7 +12,7 @@ import {
 import { Link, router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
+import { Mail, Lock, Eye, EyeOff, ArrowLeft } from 'lucide-react-native';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -40,6 +40,13 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <TouchableOpacity 
+        style={styles.backButton}
+        onPress={() => router.back()}
+      >
+        <ArrowLeft size={24} color="#333" />
+      </TouchableOpacity>
+
       <View style={styles.header}>
         <Image
           source={{ uri: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg' }}
@@ -108,6 +115,15 @@ export default function LoginScreen() {
             </TouchableOpacity>
           </Link>
         </View>
+
+        <View style={styles.restaurantLink}>
+          <Text style={styles.restaurantLinkText}>Are you a restaurant owner? </Text>
+          <Link href="/(restaurant-auth)/login" asChild>
+            <TouchableOpacity>
+              <Text style={styles.linkText}>Restaurant Login</Text>
+            </TouchableOpacity>
+          </Link>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -117,6 +133,18 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  backButton: {
+    position: 'absolute',
+    top: 60,
+    left: 20,
+    zIndex: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   header: {
     height: 300,
@@ -198,6 +226,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 16,
   },
   footerText: {
     fontSize: 14,
@@ -208,5 +237,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Inter-SemiBold',
     color: '#FF6B35',
+  },
+  restaurantLink: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
+  restaurantLinkText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: '#666',
   },
 });

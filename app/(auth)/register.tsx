@@ -12,7 +12,7 @@ import {
 import { Link, router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react-native';
+import { Mail, Lock, User, Eye, EyeOff, ArrowLeft } from 'lucide-react-native';
 
 export default function RegisterScreen() {
   const [email, setEmail] = useState('');
@@ -41,6 +41,13 @@ export default function RegisterScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <TouchableOpacity 
+        style={styles.backButton}
+        onPress={() => router.back()}
+      >
+        <ArrowLeft size={24} color="#333" />
+      </TouchableOpacity>
+
       <View style={styles.header}>
         <Image
           source={{ uri: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg' }}
@@ -129,6 +136,18 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  backButton: {
+    position: 'absolute',
+    top: 60,
+    left: 20,
+    zIndex: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   header: {
     height: 300,

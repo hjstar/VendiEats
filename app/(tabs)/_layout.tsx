@@ -10,7 +10,7 @@ export default function TabLayout() {
   const { totalItems } = useCart();
 
   if (!user) {
-    return <Redirect href="/(auth)/login" />;
+    return <Redirect href="/" />;
   }
 
   return (
@@ -34,7 +34,7 @@ export default function TabLayout() {
       }}
     >
       <Tabs.Screen
-        name="index"
+        name="home"
         options={{
           title: 'Home',
           tabBarIcon: ({ size, color }) => (
