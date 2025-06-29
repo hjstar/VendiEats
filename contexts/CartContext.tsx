@@ -1,6 +1,4 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { orderService, CreateOrderData } from '@/lib/orders';
 
 export interface CartItem {
   id: string;
@@ -26,47 +24,14 @@ interface CartContextType {
   totalPrice: number;
   restaurantId: string | null;
   canAddItem: (restaurantId: string) => boolean;
-  createOrder: (orderData: Omit<CreateOrderData, 'items'>) => Promise<boolean>;
   isLoading: boolean;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-const CART_STORAGE_KEY = 'cart_items';
-
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-
-  // Load cart from storage on mount
-  useEffect(() => {
-    loadCartFromStorage();
-  }, []);
-
-  // Save cart to storage whenever items change
-  useEffect(() => {
-    saveCartToStorage();
-  }, [items]);
-
-  const loadCartFromStorage = async () => {
-    try {
-      const storedCart = await AsyncStorage.getItem(CART_STORAGE_KEY);
-      if (storedCart) {
-        const parsedCart = JSON.parse(storedCart);
-        setItems(parsedCart);
-      }
-    } catch (error) {
-      console.error('Error loading cart from storage:', error);
-    }
-  };
-
-  const saveCartToStorage = async () => {
-    try {
-      await AsyncStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
-    } catch (error) {
-      console.error('Error saving cart to storage:', error);
-    }
-  };
 
   const restaurantId = items.length > 0 ? items[0].restaurantId : null;
 
@@ -95,7 +60,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       
       return [...currentItems, { 
         ...newItem, 
-        id: `${newItem.menuItemId}_${Date.now()}`,
         quantity: 1 
       }];
     });
@@ -130,42 +94,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setItems([]);
   };
 
-  const createOrder = async (orderData: Omit<CreateOrderData, 'items'>): Promise<boolean> => {
-    if (items.length === 0) {
-      throw new Error('Cart is empty');
-    }
-
-    try {
-      setIsLoading(true);
-      
-      const orderItems = items.map(item => ({
-        menuItemId: item.menuItemId,
-        name: item.name,
-        price: item.price,
-        quantity: item.quantity,
-        customizations: item.customizations,
-        specialInstructions: item.specialInstructions,
-      }));
-
-      const order = await orderService.createOrder({
-        ...orderData,
-        items: orderItems,
-      });
-
-      if (order) {
-        clearCart();
-        return true;
-      }
-      
-      return false;
-    } catch (error) {
-      console.error('Error creating order:', error);
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
   const totalPrice = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
@@ -181,7 +109,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       totalPrice,
       restaurantId,
       canAddItem,
-      createOrder,
       isLoading,
     }}>
       {children}
