@@ -33,33 +33,16 @@ const userSchema = new mongoose.Schema({
     street: String,
     city: String,
     state: String,
-    zipCode: String,
-    coordinates: {
-      type: [Number], // [longitude, latitude]
-      index: '2dsphere'
-    }
+    zipCode: String
   },
   role: {
     type: String,
-    enum: ['customer', 'restaurant_owner', 'admin'],
+    enum: ['customer', 'restaurant_owner'],
     default: 'customer'
   },
   isActive: {
     type: Boolean,
     default: true
-  },
-  avatar: {
-    type: String,
-    default: ''
-  },
-  preferences: {
-    notifications: {
-      email: { type: Boolean, default: true },
-      push: { type: Boolean, default: true },
-      sms: { type: Boolean, default: false }
-    },
-    dietary: [String], // vegetarian, vegan, gluten-free, etc.
-    cuisines: [String] // preferred cuisines
   }
 }, {
   timestamps: true
