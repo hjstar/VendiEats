@@ -62,76 +62,82 @@ export default function HomeScreen() {
               <Text style={styles.greeting}>Hello {user?.name || 'Guest'}!</Text>
               <Text style={styles.subGreeting}>What would you like to eat?</Text>
             </View>
-            <TouchableOpacity 
-              style={styles.restaurantPortalButton}
-              onPress={() => router.push('/(restaurant-auth)/login')}
-            >
-              <ChefHat size={16} color="#FF6B35" />
-              <Text style={styles.restaurantPortalText}>Restaurant Portal</Text>
-            </TouchableOpacity>
+            
           </View>
         </View>
 
         {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <Search size={20} color="#666" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search restaurants or dishes..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholderTextColor="#999"
-            onSubmitEditing={handleSearch}
-            returnKeyType="search"
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={handleSearch} style={styles.searchButton}>
-              <Text style={styles.searchButtonText}>Search</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+     <TouchableOpacity
+  activeOpacity={1}
+  onPress={() => router.push('/(tabs)/search')}
+  style={styles.searchContainer}
+>
+  <Search size={20} color="#666" style={styles.searchIcon} />
+  <Text style={styles.searchInput}>Search restaurants or dishes...</Text>
+</TouchableOpacity>
 
-        {/* Categories */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Categories</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesContainer}>
-            <TouchableOpacity
-              style={[
-                styles.categoryCard,
-                !selectedCategory && styles.selectedCategory
-              ]}
-              onPress={() => setSelectedCategory(null)}
-            >
-              <Text style={styles.categoryIcon}>🍽️</Text>
-              <Text style={[
-                styles.categoryName,
-                !selectedCategory && styles.selectedCategoryText
-              ]}>
-                All
-              </Text>
-            </TouchableOpacity>
-            {categories.map(category => (
-              <TouchableOpacity
-                key={category.id}
-                style={[
-                  styles.categoryCard,
-                  selectedCategory === category.name && styles.selectedCategory
-                ]}
-                onPress={() => setSelectedCategory(
-                  selectedCategory === category.name ? null : category.name
-                )}
-              >
-                <Text style={styles.categoryIcon}>{category.icon}</Text>
-                <Text style={[
-                  styles.categoryName,
-                  selectedCategory === category.name && styles.selectedCategoryText
-                ]}>
-                  {category.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
+{/* Categories Section */}
+<View style={styles.section}>
+  <Text style={styles.sectionTitle}>Categories</Text>
+  
+  <ScrollView
+    horizontal
+    showsHorizontalScrollIndicator={false}
+    contentContainerStyle={{ paddingLeft: 20, paddingRight: 10 }}
+  >
+    {/* 'All' category */}
+    <TouchableOpacity
+      style={[
+        styles.categoryCard,
+        !selectedCategory && styles.selectedCategory
+      ]}
+      onPress={() => {
+        setSelectedCategory(null);
+        setSearchQuery('');
+        handleSearch('');
+      }}
+    >
+      <Text style={styles.categoryIcon}>🍽️</Text>
+      <Text style={[
+        styles.categoryName,
+        !selectedCategory && styles.selectedCategoryText
+      ]}>
+        All
+      </Text>
+    </TouchableOpacity>
+
+    {/* Dynamic categories */}
+    {categories.map(category => (
+      <TouchableOpacity
+        key={category.id}
+        style={[
+          styles.categoryCard,
+          selectedCategory === category.name && styles.selectedCategory
+        ]}
+        onPress={() => {
+          const isSame = selectedCategory === category.name;
+          const newCategory = isSame ? null : category.name;
+          setSelectedCategory(newCategory);
+          setSearchQuery(newCategory || '');
+          if (!isSame && newCategory) {
+            handleSearch(newCategory);
+          } else {
+            handleSearch('');
+          }
+        }}
+      >
+        <Text style={styles.categoryIcon}>{category.icon}</Text>
+        <Text style={[
+          styles.categoryName,
+          selectedCategory === category.name && styles.selectedCategoryText
+        ]}>
+          {category.name}
+        </Text>
+      </TouchableOpacity>
+    ))}
+  </ScrollView>
+</View>
+
 
         {/* Featured Restaurants */}
         {featuredRestaurants.length > 0 && (
