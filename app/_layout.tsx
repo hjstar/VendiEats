@@ -20,6 +20,7 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { CartProvider } from '@/contexts/CartContext';
 import { RestaurantProvider } from '@/contexts/RestaurantContext';
 import { RestaurantAuthProvider } from '@/contexts/RestaurantAuthContext';
+import { DriverAuthProvider } from '@/contexts/DriverAuthContext';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -48,25 +49,29 @@ export default function RootLayout() {
   }
 
   return (
-    <RestaurantAuthProvider>
-      <RestaurantProvider>
-        <AuthProvider>
-          <CartProvider>
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="index" />
-              <Stack.Screen name="(auth)" />
-              <Stack.Screen name="(tabs)" />
-              <Stack.Screen name="(restaurant-auth)" />
-              <Stack.Screen name="(restaurant-dashboard)" />
-              <Stack.Screen name="restaurant/[id]" />
-              <Stack.Screen name="item/[id]" />
-              <Stack.Screen name="checkout" />
-              <Stack.Screen name="+not-found" />
-            </Stack>
-            <StatusBar style="auto" />
-          </CartProvider>
-        </AuthProvider>
-      </RestaurantProvider>
-    </RestaurantAuthProvider>
+    <DriverAuthProvider>
+      <RestaurantAuthProvider>
+        <RestaurantProvider>
+          <AuthProvider>
+            <CartProvider>
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="index" />
+                <Stack.Screen name="(auth)" />
+                <Stack.Screen name="(tabs)" />
+                <Stack.Screen name="(restaurant-auth)" />
+                <Stack.Screen name="(restaurant-dashboard)" />
+                <Stack.Screen name="(driver-auth)" />
+                <Stack.Screen name="(driver-dashboard)" />
+                <Stack.Screen name="restaurant/[id]" />
+                <Stack.Screen name="item/[id]" />
+                <Stack.Screen name="checkout" />
+                <Stack.Screen name="+not-found" />
+              </Stack>
+              <StatusBar style="auto" />
+            </CartProvider>
+          </AuthProvider>
+        </RestaurantProvider>
+      </RestaurantAuthProvider>
+    </DriverAuthProvider>
   );
 }

@@ -11,13 +11,15 @@ import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRestaurantAuth } from '@/contexts/RestaurantAuthContext';
-import { User, ChefHat, Utensils } from 'lucide-react-native';
+import { useDriverAuth } from '@/contexts/DriverAuthContext';
+import { User, ChefHat, Utensils, Truck } from 'lucide-react-native';
 
 const { width, height } = Dimensions.get('window');
 
 export default function WelcomeScreen() {
   const { user } = useAuth();
   const { owner } = useRestaurantAuth();
+  const { driver } = useDriverAuth();
 
   // Redirect if already logged in
   React.useEffect(() => {
@@ -25,8 +27,10 @@ export default function WelcomeScreen() {
       router.replace('/(tabs)');
     } else if (owner) {
       router.replace('/(restaurant-dashboard)');
+    } else if (driver) {
+      router.replace('/(driver-dashboard)');
     }
-  }, [user, owner]);
+  }, [user, owner, driver]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -83,31 +87,60 @@ export default function WelcomeScreen() {
           <View style={styles.dividerLine} />
         </View>
 
-        {/* Restaurant Options */}
-        <View style={styles.restaurantSection}>
+        {/* Business Options */}
+        <View style={styles.businessSection}>
+          {/* Restaurant Options */}
           <TouchableOpacity
-            style={styles.restaurantOption}
+            style={styles.businessOption}
             onPress={() => router.push('/(restaurant-auth)/login')}
           >
-            <View style={styles.restaurantIconContainer}>
+            <View style={styles.businessIconContainer}>
               <ChefHat size={24} color="#FF6B35" />
             </View>
             <View style={styles.optionContent}>
-              <Text style={styles.restaurantOptionTitle}>Restaurant Portal</Text>
-              <Text style={styles.restaurantOptionSubtitle}>
+              <Text style={styles.businessOptionTitle}>Restaurant Portal</Text>
+              <Text style={styles.businessOptionSubtitle}>
                 Manage your restaurant & orders
               </Text>
             </View>
           </TouchableOpacity>
 
+          {/* Driver Options */}
           <TouchableOpacity
-            style={styles.restaurantSignupOption}
-            onPress={() => router.push('/(restaurant-auth)/register')}
+            style={styles.businessOption}
+            onPress={() => router.push('/(driver-auth)/login')}
           >
-            <Text style={styles.restaurantSignupText}>
-              New Restaurant? Join Our Platform
-            </Text>
+            <View style={styles.driverIconContainer}>
+              <Truck size={24} color="#2196F3" />
+            </View>
+            <View style={styles.optionContent}>
+              <Text style={styles.businessOptionTitle}>Driver Portal</Text>
+              <Text style={styles.businessOptionSubtitle}>
+                Deliver orders and earn money
+              </Text>
+            </View>
           </TouchableOpacity>
+
+          {/* Sign up options */}
+          <View style={styles.signupOptions}>
+            <TouchableOpacity
+              style={styles.businessSignupOption}
+              onPress={() => router.push('/(restaurant-auth)/register')}
+            >
+              <Text style={styles.businessSignupText}>
+                New Restaurant? Join Our Platform
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.driverSignupOption}
+              onPress={() => router.push('/(driver-auth)/register')}
+            >
+              <Text style={styles.driverSignupText}>
+                Become a Driver
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
@@ -127,7 +160,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   heroSection: {
-    height: height * 0.4,
+    height: height * 0.35,
     position: 'relative',
   },
   heroImage: {
@@ -172,7 +205,7 @@ const styles = StyleSheet.create({
   welcomeContent: {
     flex: 1,
     padding: 24,
-    paddingTop: 32,
+    paddingTop: 24,
   },
   welcomeTitle: {
     fontSize: 28,
@@ -186,10 +219,10 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     color: '#666',
     textAlign: 'center',
-    marginBottom: 32,
+    marginBottom: 24,
   },
   optionsContainer: {
-    marginBottom: 24,
+    marginBottom: 20,
   },
   primaryOption: {
     flexDirection: 'row',
@@ -244,7 +277,7 @@ const styles = StyleSheet.create({
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 24,
+    marginVertical: 20,
   },
   dividerLine: {
     flex: 1,
@@ -257,10 +290,10 @@ const styles = StyleSheet.create({
     color: '#999',
     marginHorizontal: 16,
   },
-  restaurantSection: {
-    marginBottom: 24,
+  businessSection: {
+    marginBottom: 20,
   },
-  restaurantOption: {
+  businessOption: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fff',
@@ -275,7 +308,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  restaurantIconContainer: {
+  businessIconContainer: {
     backgroundColor: '#fff5f0',
     borderRadius: 12,
     width: 48,
@@ -284,29 +317,55 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 16,
   },
-  restaurantOptionTitle: {
+  driverIconContainer: {
+    backgroundColor: '#f0f8ff',
+    borderRadius: 12,
+    width: 48,
+    height: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  businessOptionTitle: {
     fontSize: 18,
     fontFamily: 'Poppins-SemiBold',
     color: '#333',
     marginBottom: 4,
   },
-  restaurantOptionSubtitle: {
+  businessOptionSubtitle: {
     fontSize: 14,
     fontFamily: 'Inter-Regular',
     color: '#666',
   },
-  restaurantSignupOption: {
+  signupOptions: {
+    marginTop: 8,
+  },
+  businessSignupOption: {
     backgroundColor: '#f8f9fa',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#e0e0e0',
+    marginBottom: 8,
   },
-  restaurantSignupText: {
+  businessSignupText: {
     fontSize: 14,
     fontFamily: 'Inter-Medium',
     color: '#666',
+  },
+  driverSignupOption: {
+    backgroundColor: '#f0f8ff',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#2196F3',
+  },
+  driverSignupText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Medium',
+    color: '#2196F3',
   },
   footer: {
     padding: 20,
